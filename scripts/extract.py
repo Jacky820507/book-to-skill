@@ -242,12 +242,46 @@ def detect_structure(text: str) -> dict:
     }
 
 
+def extract_with_docling(pdf_path: str) -> str | None:
+    """Layout-aware extraction using Docling. Best for technical books with tables and code."""
+    try:
+        from docling.document_converter import DocumentConverter
+        from docling.datamodel.pipeline_options import PdfPipelineOptions
+        from docling.datamodel.base_models import InputFormat
+        from docling.document_converter import PdfFormatOption
+
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.do_ocr = False
+        pipeline_options.do_table_structure = True
+
+        converter = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+            }
+        )
+        result = converter.convert(pdf_path)
+        return result.document.export_to_markdown()
+    except ImportError:
+        return None
+    except Exception:
+        return None
+
+
 def main():
     if len(sys.argv) < 2:
-        print("Usage: extract.py <path-to-pdf-or-epub>", file=sys.stderr)
+        print("Usage: extract.py <path-to-pdf-or-epub> [--mode technical|text]", file=sys.stderr)
         sys.exit(1)
 
     input_path = sys.argv[1]
+
+    # Parse --mode flag
+    extraction_mode = "text"
+    if "--mode" in sys.argv:
+        idx = sys.argv.index("--mode")
+        if idx + 1 < len(sys.argv):
+            extraction_mode = sys.argv[idx + 1].lower()
+    if extraction_mode not in ("technical", "text"):
+        extraction_mode = "text"
 
     if not os.path.exists(input_path):
         print(f"ERROR: File not found: {input_path}", file=sys.stderr)
@@ -281,37 +315,49 @@ def main():
         pages_label = "spine_items"
     else:
         print(f"Extracting PDF: {input_path}")
-        print("Trying pdftotext...", end=" ", flush=True)
-        text = extract_with_pdftotext(input_path)
-
-        if text:
-            method = "pdftotext"
-            print("OK")
-        else:
-            print("not available")
-            print("Trying PyPDF2...", end=" ", flush=True)
-            text = extract_with_pypdf2(input_path)
+        if extraction_mode == "technical":
+            print("Mode: technical — using Docling (layout-aware)...", end=" ", flush=True)
+            text = extract_with_docling(input_path)
             if text:
-                method = "PyPDF2"
+                method = "docling"
+                print("OK")
+            else:
+                print("not available, falling back to pdftotext")
+                extraction_mode = "text"
+
+        if extraction_mode == "text":
+            print("Mode: text — using pdftotext...")
+            print("Trying pdftotext...", end=" ", flush=True)
+            text = extract_with_pdftotext(input_path)
+
+            if text:
+                method = "pdftotext"
                 print("OK")
             else:
                 print("not available")
-                print("Trying pdfminer.six...", end=" ", flush=True)
-                text = extract_with_pdfminer(input_path)
+                print("Trying PyPDF2...", end=" ", flush=True)
+                text = extract_with_pypdf2(input_path)
                 if text:
-                    method = "pdfminer"
+                    method = "PyPDF2"
                     print("OK")
                 else:
-                    print("FAILED")
-                    print(
-                        "\nERROR: Could not extract text from PDF.\n"
-                        "Install one of: poppler-utils (pdftotext), PyPDF2, or pdfminer.six\n"
-                        "  sudo apt install poppler-utils\n"
-                        "  pip3 install PyPDF2\n"
-                        "  pip3 install pdfminer.six",
-                        file=sys.stderr,
-                    )
-                    sys.exit(1)
+                    print("not available")
+                    print("Trying pdfminer.six...", end=" ", flush=True)
+                    text = extract_with_pdfminer(input_path)
+                    if text:
+                        method = "pdfminer"
+                        print("OK")
+                    else:
+                        print("FAILED")
+                        print(
+                            "\nERROR: Could not extract text from PDF.\n"
+                            "Install one of: poppler-utils (pdftotext), PyPDF2, or pdfminer.six\n"
+                            "  sudo apt install poppler-utils\n"
+                            "  pip3 install PyPDF2\n"
+                            "  pip3 install pdfminer.six",
+                            file=sys.stderr,
+                        )
+                        sys.exit(1)
 
         pages = count_pages(input_path)
         pages_label = "pages"
@@ -328,6 +374,7 @@ def main():
         "filename": Path(input_path).name,
         "format": "epub" if is_epub else "pdf",
         "extraction_method": method,
+        "extraction_mode": extraction_mode,
         "file_size_mb": round(file_size_mb, 2),
         pages_label: pages,
         "chars": len(text),

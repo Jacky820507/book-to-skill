@@ -73,17 +73,43 @@ If the file is not found or the format is not supported, stop with a clear error
 
 ---
 
+## Step 1.5 — Identify book type
+
+Before extracting, ask the user:
+
+> "What kind of content does this book have? This helps me choose the best extraction method.
+>
+> 1. **Technical** — has code blocks, tables, formulas, diagrams (e.g. programming books, academic papers, architecture guides)
+> 2. **Text-heavy** — mostly prose, few or no tables/code (e.g. management, productivity, narrative non-fiction)
+> 3. **Not sure** — I'll use the fast method and warn you if quality seems limited"
+
+Store the answer as `BOOK_TYPE`:
+- Option 1 → `BOOK_TYPE=technical`
+- Option 2 → `BOOK_TYPE=text`
+- Option 3 → `BOOK_TYPE=text`
+
+**If `BOOK_TYPE=technical`**, inform the user before proceeding:
+> "📐 Technical mode selected — using Docling for structure-aware extraction (tables, code blocks, formulas preserved as markdown). This takes ~1.5s per page, so expect a few minutes for longer books. Starting now…"
+
+**If `BOOK_TYPE=text`**, inform:
+> "📄 Text mode selected — using fast extraction (pdftotext). Ready in seconds."
+
+---
+
 ## Step 2 — Extract text from PDF or EPUB
 
-Run the extraction script:
+Run the extraction script, passing the book type:
 
 ```bash
-python3 ~/.claude/skills/book-to-skill/scripts/extract.py "$0"
+python3 ~/.claude/skills/book-to-skill/scripts/extract.py "$0" --mode <BOOK_TYPE>
 ```
+
+- `--mode technical` → uses Docling (layout-aware, preserves tables and code blocks as markdown)
+- `--mode text` → uses pdftotext → PyPDF2 → pdfminer fallback chain (fast, plain text)
 
 This creates:
 - `/tmp/book_skill_work/full_text.txt` — full extracted text
-- `/tmp/book_skill_work/metadata.json` — title, estimated pages, token count, size
+- `/tmp/book_skill_work/metadata.json` — title, estimated pages, token count, size, extraction_mode
 
 Read `/tmp/book_skill_work/metadata.json` to understand what was extracted.
 
@@ -204,7 +230,11 @@ For EACH chapter/major section identified in Step 3:
 
 Read the corresponding section of `/tmp/book_skill_work/full_text.txt` (use character offsets or grep for chapter headings).
 
-Create `~/.claude/skills/<skill_name>/chapters/ch<NN>-<slug>.md` with this structure:
+Create `~/.claude/skills/<skill_name>/chapters/ch<NN>-<slug>.md` using the structure below.
+
+**Adapt emphasis based on `BOOK_TYPE`:**
+- `technical` → prioritize "Code Examples", "Reference Tables", and "Commands & APIs" sections; preserve exact syntax
+- `text` → prioritize "Frameworks Introduced", "Mental Models", and "Key Takeaways"; skip empty technical sections
 
 ```markdown
 # Chapter N: <Full Title>
@@ -226,6 +256,16 @@ Create `~/.claude/skills/<skill_name>/chapters/ch<NN>-<slug>.md` with this struc
 
 ## Anti-patterns
 - **<What to avoid>**: <why it fails>
+
+## Code Examples *(technical books only — omit if BOOK_TYPE=text)*
+<!-- Copy the most instructive snippet from the chapter. Preserve indentation exactly. -->
+```<language>
+<key code example from this chapter>
+```
+- **What it demonstrates**: <one line>
+
+## Reference Tables *(technical books only — omit if BOOK_TYPE=text)*
+<!-- Reproduce any comparison matrix, parameter table, or decision table from the chapter in markdown. -->
 
 ## Key Takeaways
 1. <Actionable insight>

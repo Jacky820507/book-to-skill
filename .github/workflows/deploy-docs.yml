@@ -36,10 +36,11 @@ jobs:
       - name: Install MkDocs Material
         run: pip install mkdocs-material
       - name: Assemble docs sources
-        # Single-source: the homepage and skill reference are the repo-root
-        # README.md / SKILL.md, copied in (never committed under docs/).
+        # Single-source: the Guide and Skill Reference pages are the repo-root
+        # README.md / SKILL.md, copied in (never committed under docs/). The
+        # landing page docs/index.md is committed and curated separately.
         run: |
-          cp README.md docs/index.md
+          cp README.md docs/guide.md
           cp SKILL.md docs/skill-reference.md
           cp BACKERS.md docs/BACKERS.md
       - name: Build

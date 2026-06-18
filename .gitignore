@@ -12,3 +12,9 @@ build/
 
 # Local design specifications
 docs/superpowers/specs/
+
+# MkDocs: build output + pages assembled from README/SKILL at deploy time
+site/
+docs/index.md
+docs/skill-reference.md
+docs/BACKERS.md

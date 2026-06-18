@@ -1,0 +1,47 @@
+site_name: book-to-skill
+site_description: Convert books and documents into structured, on-demand agent skills.
+site_url: https://virgiliojr94.github.io/book-to-skill/
+repo_url: https://github.com/virgiliojr94/book-to-skill
+repo_name: virgiliojr94/book-to-skill
+edit_uri: ""
+
+# Home (index.md) and Skill Reference (skill-reference.md) are assembled at build
+# time from the repo-root README.md and SKILL.md by the deploy workflow, so the
+# docs stay single-source — there is no duplicated copy committed to git.
+# See .github/workflows/deploy-docs.yml.
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.top
+    - navigation.sections
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+
+nav:
+  - Home: index.md
+  - Architecture: ARCHITECTURE.md
+  - Performance: PERFORMANCE.md
+  - Skill Reference: skill-reference.md
+
+markdown_extensions:
+  - admonition
+  - tables
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - toc:
+      permalink: true
